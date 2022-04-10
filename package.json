@@ -4,14 +4,16 @@
   "description": "API project for freeCodeCamp",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node -r dotenv/config server.js",
+    "db:create": "node -r dotenv/config ./db/create.js",
+    "dev": "nodemon -r dotenv/config server.js"
   },
   "dependencies": {
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "pg": "^8.7.3"
   },
   "license": "MIT",
   "devDependencies": {
