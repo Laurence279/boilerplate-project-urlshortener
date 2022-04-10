@@ -1,1 +1,12 @@
-# [URL Shortener Microservice](https://www.freecodecamp.org/learn/back-end-development-and-apis/back-end-development-and-apis-projects/url-shortener-microservice)
+
+# URL Shortener Microservice
+
+Returns a JSON with a shortened URL.
+
+## Usage:
+
+POST:
+```/api/shorturl //Accepts a 'url' argument in the body. Maps the URL to a UUID.```
+
+GET:
+```/api/shorturl/<shortened_url> //Redirects to mapped URL```
