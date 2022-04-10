@@ -5,6 +5,8 @@ const app = express();
 const crypto = require('crypto')
 const db = require("./db/connection.js");
 
+const MAPPING_LIMIT = 100
+
 // Basic Configuration
 const port = process.env.PORT || 3000;
 
@@ -23,6 +25,7 @@ app.get('/api/shorturl/:short_url', async function(req, res) {
   const shortURL = req.params.short_url;
   const foundURL = await findUrlMappingById(shortURL);
   console.log(`Found URL was:`,foundURL);
+
   if(foundURL) {
     res.redirect(foundURL.original_url);
   } 
@@ -39,6 +42,17 @@ app.post('/api/shorturl', async function(req, res) {
   const valid = isValidHttpURL(requestedURL);
   if(!valid) {
     res.json({error: 'invalid url'});
+    return;
+  }
+
+  const mappings = await findAllMappings();
+
+  const expiredMappings = await deleteExpiredMappings(mappings);
+  console.log("Expired mappings removed:", expiredMappings);
+
+  if(mappings.length >= MAPPING_LIMIT)
+  {
+    res.json({error: `Too many URLs! Please try again later.`})
     return;
   }
 
@@ -90,6 +104,13 @@ async function generateShortURL(url){
   return mapping;
 }
 
+async function findAllMappings(){
+  const data = await db.query(
+    `SELECT * FROM mappings;`
+  )
+  return data.rows;
+}
+
 async function findUrlMappingByURL(url){
   const data = await db.query(
     `SELECT * FROM mappings WHERE original_url=$1;`, [url]
@@ -105,9 +126,35 @@ async function findUrlMappingById(id){
 }
 
 async function createUrlMapping(mapping){
+  const expiry = new Date().setDate(new Date().getDate() + 7);
+  console.log(expiry);
   const data = await db.query(
-    `INSERT INTO mappings (original_url, short_url) VALUES ($1, $2) RETURNING *;`,
-    [mapping.url, mapping.id]
+    `INSERT INTO mappings (original_url, short_url, expiry_date) VALUES ($1, $2, $3) RETURNING *;`,
+    [mapping.url, mapping.id, expiry]
   );
   return data.rows[0];
+}
+
+async function deleteExpiredMappings(mappings){
+
+  const removedMappings = [];
+
+  for(let i = 0; i < mappings.length; i++){
+    
+    const today = new Date();
+    const expiry = new Date(Number(mappings[i].expiry_date))
+
+    // Have we reached the expiry date yet?
+    if(today <= expiry) continue;
+
+    const data = await db.query(
+      `DELETE FROM mappings WHERE id=$1 RETURNING *;`, [mappings[i].id]
+    )
+    
+    removedMappings.push(data.rows[0]);
+
+  }
+
+  return removedMappings;
+  
 }
